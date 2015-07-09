@@ -126,6 +126,37 @@ def remove_border(m):
         ret += [l[1:-1]]
     return ret
 
+class ReprWrapper:
+  """A class that wraps around an object, allowing the user to decide how will
+  it be displayed by __repr__. Indended for a readable get_matchpoints.
+  Usage:
+  >>> l = ReprWrapper('spam', lambda: 3)
+  >>> l
+  'spam'
+  >>> l()
+  3
+  """
+
+  def __init__(self, str_show, expr=None):
+    self.str_show = repr(str_show)
+    if expr is not None:
+        self.l = expr
+    else:
+        self.l = eval(str_show)
+
+  def __getattr__(self, arg):
+    """This is called whenever a method unknown to ReprWrapper is called. This
+    includes __call__, so an attempt to call ReprWrapper object will result in
+    actually calling the lambda."""
+    return getattr(self.l, arg)
+
+  def __str__(self):
+    return self.str_show
+
+  def __repr__(self):
+    return self.str_show
+
+
 def main():
     f = open(sys.argv[1])
     m = load_matrix(f)
@@ -145,18 +176,18 @@ def main():
     # TODO: check if this is consistent with its horizontal equivalent
 
     MASKS = {
-        0b000: lambda i, j: (i * j) % 2 + (i * j) % 3 == 0,
-        0b001: lambda i, j: (i / 2 + j / 3) % 2 == 0,
-        0b010: lambda i, j: ((i * j) % 3 + i + j) % 2 == 0,
-        0b011: lambda i, j: ((i * j) % 3 + i * j) % 2 == 0,
-        0b100: lambda i, j: i % 2 == 0,
-        0b101: lambda i, j: (i + j) % 2 == 0,
-        0b110: lambda i, j: (i + j) % 3 == 0,
-        0b111: lambda i, j: j % 3 == 0,
+        0b000: ReprWrapper('lambda i, j: (i * j) % 2 + (i * j) % 3 == 0'),
+        0b001: ReprWrapper('lambda i, j: (i / 2 + j / 3) % 2 == 0'),
+        0b010: ReprWrapper('lambda i, j: ((i * j) % 3 + i + j) % 2 == 0'),
+        0b011: ReprWrapper('lambda i, j: ((i * j) % 3 + i * j) % 2 == 0'),
+        0b100: ReprWrapper('lambda i, j: i % 2 == 0'),
+        0b101: ReprWrapper('lambda i, j: (i + j) % 2 == 0'),
+        0b110: ReprWrapper('lambda i, j: (i + j) % 3 == 0'),
+        0b111: ReprWrapper('lambda i, j: j % 3 == 0'),
     }
     mask_arr = m[8][2:5]
     mask_id = arr_to_b2(mask_arr)
-    print("Mask: %s" % flatten_arr(mask_arr))
+    print("Mask: %s (%s)" % (flatten_arr(mask_arr), MASKS[mask_id]))
     masked = MASKS[mask_id]
     mask = lambda m, i, j: int(not m[i][j]) if masked(i,j) else m[i][j]
 
