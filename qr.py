@@ -113,27 +113,52 @@ def flatten_arr(arr):
 def arr_to_b2(arr):
     return int(flatten_arr(arr), 2)
 
+def mask(m, i, j):
+    if ((i*j)%3 + i*j) % 2 == 0:
+        return int(not(m[i][j]))
+    return m[i][j]
+
+def remove_border(m):
+    ret = []
+    for n, l in enumerate(m):
+        if n == 0 or n + 1 == len(m):
+            continue
+        ret += [l[1:-1]]
+    return ret
 
 def main():
     f = open(sys.argv[1])
     m = load_matrix(f)
     m = compress(m)
+    m = remove_border(m)
     if len(m) != len(m[0]):
         raise ValueError("QR code is not square")
-    if len(m) != 23:
+    if len(m) != 21:
         raise NotImplementedError("This program can currently"
-                                  " parse only 23x23 QR codes.")
+                                  " parse only 21x21 QR codes.")
 
     ECC_EXPLAIN = {0b00: 'H (30%)', 0b01: 'Q (25%)',
                    0b10: 'M (15%)', 0b11: 'L (7%)'}
-    ecc_arr = m[9][1:3]
+    ecc_arr = m[8][0:2]
     ecc_lvl = arr_to_b2(ecc_arr)
     print("Error correction: %s" % ECC_EXPLAIN.get(ecc_lvl, ecc_lvl))
     # TODO: check if this is consistent with its horizontal equivalent
 
-    mask_arr = m[9][3:6]
-    mask = arr_to_b2(mask_arr)
+    MASKS = {
+        0b000: lambda i, j: (i * j) % 2 + (i * j) % 3 == 0,
+        0b001: lambda i, j: (i / 2 + j / 3) % 2 == 0,
+        0b010: lambda i, j: ((i * j) % 3 + i + j) % 2 == 0,
+        0b011: lambda i, j: ((i * j) % 3 + i * j) % 2 == 0,
+        0b100: lambda i, j: i % 2 == 0,
+        0b101: lambda i, j: (i + j) % 2 == 0,
+        0b110: lambda i, j: (i + j) % 3 == 0,
+        0b111: lambda i, j: j % 3 == 0,
+    }
+    mask_arr = m[8][2:5]
+    mask_id = arr_to_b2(mask_arr)
     print("Mask: %s" % flatten_arr(mask_arr))
+    masked = MASKS[mask_id]
+    mask = lambda m, i, j: int(not m[i][j]) if masked(i,j) else m[i][j]
 
     ENCODING_EXPLAIN = {
         0b0000: 'End of message',
@@ -147,8 +172,20 @@ def main():
         0b1001: 'FNC1 in second position',
     }
 
-    encoding_arr = [m[21][21], m[21][20], m[20][21], m[20][20]]
-    print("Encoding: %s" % flatten_arr(encoding_arr))
+    encoding_arr = [mask(m, 20, 20), mask(m, 20, 19),
+                    mask(m, 19, 20), mask(m, 19, 19)]
+    encoding_id = arr_to_b2(encoding_arr)
+
+    length_arr = [mask(m, 18, 20), mask(m, 18, 19),
+                  mask(m, 17, 20), mask(m, 17, 19),
+                  mask(m, 16, 20), mask(m, 16, 19),
+                  mask(m, 15, 20), mask(m, 15, 19)]
+
+    length = arr_to_b2(length_arr)
+    print("Length: %s" % length)
+
+    print("Encoding: %s (%s)" % (ENCODING_EXPLAIN[encoding_id],
+                                 flatten_arr(encoding_arr)))
 
     if 'ipython' in sys.argv:
         import IPython
