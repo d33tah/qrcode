@@ -207,16 +207,23 @@ def main():
                     mask(m, 19, 20), mask(m, 19, 19)]
     encoding_id = arr_to_b2(encoding_arr)
 
-    length_arr = [mask(m, 18, 20), mask(m, 18, 19),
-                  mask(m, 17, 20), mask(m, 17, 19),
-                  mask(m, 16, 20), mask(m, 16, 19),
-                  mask(m, 15, 20), mask(m, 15, 19)]
+    def get_8bit(mask, m, starti, startj):
+        return [mask(m, starti + 3, startj + 1), mask(m, starti + 3, startj),
+                mask(m, starti + 2, startj + 1), mask(m, starti + 2, startj),
+                mask(m, starti + 1, startj + 1), mask(m, starti + 1, startj),
+                mask(m, starti + 0, startj + 1), mask(m, starti + 0, startj)]
+
+
+    length_arr = get_8bit(mask, m, 15, 19)
 
     length = arr_to_b2(length_arr)
     print("Length: %s" % length)
 
     print("Encoding: %s (%s)" % (ENCODING_EXPLAIN[encoding_id],
                                  flatten_arr(encoding_arr)))
+
+    first_letter = chr(arr_to_b2(get_8bit(mask, m, 11, 19)))
+    print("First letter: %s" % first_letter)
 
     if 'ipython' in sys.argv:
         import IPython
